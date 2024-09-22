@@ -9,7 +9,7 @@ KUBERNETES_TARGET_TYPE = 'kubernetes'
 
 
 class Target(BaseModel):
-    target_type: Literal['postgres', 'snowflake', 'bigquery', 'redshift', 'databricks', 'spark'] = Field(alias='type')
+    target_type: Literal['postgres', 'snowflake', 'bigquery', 'redshift', 'databricks', 'hive'] = Field(alias='type')
     target_schema: str = Field(alias='schema')
     threads: int = Field(default=1)
 

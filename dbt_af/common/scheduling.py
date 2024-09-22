@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple, Union
 from attrs import define
 
 
-@define
+@define(kw_only=False)
 class CronExpression:
     """
     Represents cron expression as a shift from the base expression

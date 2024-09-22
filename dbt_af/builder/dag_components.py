@@ -279,18 +279,31 @@ class DagModel(DagComponent):
             task_group=self.task_group,
             dag=self.domain_dag.af_dag,
         )
-        for test in self._small_tests:
-            test_task = DbtTest(
-                task_id=test.replace('.', '__'),
-                model_name=test,
-                dag=self.domain_dag.af_dag,
-                task_group=self.task_group,
-                schedule_tag=self.domain_dag.schedule,
-                dbt_af_config=self.domain_dag.config,
-            )
-            delayed_deps(self.model_task) >> delayed_deps(test_task)
-            delayed_deps(test_task) >> delayed_deps(endpoint_task)
+        # for test in self._small_tests:
+        #     test_task = DbtTest(
+        #         task_id=test.replace('.', '__'),
+        #         model_name=test,
+        #         dag=self.domain_dag.af_dag,
+        #         task_group=self.task_group,
+        #         schedule_tag=self.domain_dag.schedule,
+        #         dbt_af_config=self.domain_dag.config,
+        #     )
+        #     delayed_deps(self.model_task) >> delayed_deps(test_task)
+        #     delayed_deps(test_task) >> delayed_deps(endpoint_task)
+        
+        # Combined task that runs all small tests together
+        combined_test_task = DbtTest(
+            task_id=f'{self.safe_name}__combined_tests',
+            model_name=' '.join(self._small_tests),  # Combine all test names into one task
+            dag=self.domain_dag.af_dag,
+            task_group=self.task_group,
+            schedule_tag=self.domain_dag.schedule,
+            dbt_af_config=self.domain_dag.config,
+        )
 
+        delayed_deps(self.model_task) >> delayed_deps(combined_test_task)
+        delayed_deps(combined_test_task) >> delayed_deps(endpoint_task)
+        
         return endpoint_task
 
     def _init_source_dependencies_af(self, delayed_deps: DagDelayedDependencyRegistry):

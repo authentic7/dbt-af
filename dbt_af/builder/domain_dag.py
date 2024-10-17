@@ -28,7 +28,8 @@ class DomainDag:
         catchup: bool = True,
     ):
         self.domain_name = domain_name
-        self._schedule = schedule or ScheduleTag.daily.value(timeshift=timedelta(hours=2))
+        self._schedule = schedule or ScheduleTag.daily()
+        self._schedule.timeshift = timedelta(hours=2)
         self.config: Config = config or Config()
 
         self.additional_tags: list[str] = additional_tags or []

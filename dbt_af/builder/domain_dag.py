@@ -1,7 +1,7 @@
 from collections import defaultdict
 from enum import Enum
 from typing import Optional
-
+from datetime import timedelta
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import BranchPythonOperator
 
@@ -28,7 +28,7 @@ class DomainDag:
         catchup: bool = True,
     ):
         self.domain_name = domain_name
-        self._schedule = schedule or ScheduleTag.daily()
+        self._schedule = schedule or ScheduleTag.daily.value(timeshift=timedelta(hours=2))
         self.config: Config = config or Config()
 
         self.additional_tags: list[str] = additional_tags or []

@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.9.3
+Fixes:
+- change dbt_run_model DAG name for multi-project usage (https://github.com/Toloka/dbt-af/pull/39)
+
+## v0.9.2
+Fixes:
+- all dbt target types are now supported
+
+## v0.9.1
+Fixes:
+- fixed bug with schedule overlap
+
+## v0.9.0
+Features:
+- add new scheduling tag `@every15minutes`
+- new [docs page](docs/docs.md) with code references
+
 ## v0.8.1
 Fixes:
 - upgrade `airflow-mcd` to 0.3.3 version to fix bug with DAG callbacks

@@ -48,7 +48,7 @@ class DependencyWaitPolicy:
 
     def __attrs_post_init__(self):
         if not self.per_domain and not self.per_task:
-            raise ValueError('At least one of policy must be set')
+            raise ValueError("At least one of policy must be set")
 
 
 @attrs.define(frozen=True)
@@ -76,7 +76,7 @@ class MCDIntegrationConfig:
     callbacks_enabled: bool = attrs.field(default=False)
     artifacts_export_enabled: bool = attrs.field(default=False)
     success_required: bool = attrs.field(default=False)
-    metastore_name: str = attrs.field(default='')
+    metastore_name: str = attrs.field(default="")
 
 
 @attrs.define(frozen=True)
@@ -153,11 +153,21 @@ class DbtProjectConfig:
     """
 
     dbt_project_name: str = attrs.field(validator=attrs.validators.instance_of(str))
-    dbt_models_path: str | Path = attrs.field(validator=attrs.validators.instance_of((str, Path)), converter=Path)
-    dbt_project_path: str | Path = attrs.field(validator=attrs.validators.instance_of((str, Path)), converter=Path)
-    dbt_profiles_path: str | Path = attrs.field(validator=attrs.validators.instance_of((str, Path)), converter=Path)
-    dbt_target_path: str | Path = attrs.field(validator=attrs.validators.instance_of((str, Path)), converter=Path)
-    dbt_log_path: str | Path = attrs.field(validator=attrs.validators.instance_of((str, Path)), converter=Path)
+    dbt_models_path: str | Path = attrs.field(
+        validator=attrs.validators.instance_of((str, Path)), converter=Path
+    )
+    dbt_project_path: str | Path = attrs.field(
+        validator=attrs.validators.instance_of((str, Path)), converter=Path
+    )
+    dbt_profiles_path: str | Path = attrs.field(
+        validator=attrs.validators.instance_of((str, Path)), converter=Path
+    )
+    dbt_target_path: str | Path = attrs.field(
+        validator=attrs.validators.instance_of((str, Path)), converter=Path
+    )
+    dbt_log_path: str | Path = attrs.field(
+        validator=attrs.validators.instance_of((str, Path)), converter=Path
+    )
     dbt_schema: str = attrs.field(validator=attrs.validators.instance_of(str))
     additional_dbt_env: dict[str, str] = attrs.field(factory=dict, hash=True, eq=str)
 
@@ -165,7 +175,9 @@ class DbtProjectConfig:
     def validate_additional_dbt_env_type(self, attribute, value):
         for k, v in value.items():
             if not isinstance(k, str) or not isinstance(v, str):
-                raise ValueError(f'additional_dbt_env must be a dict[str, str], got key={repr(k)}, value={repr(v)}')
+                raise ValueError(
+                    f"additional_dbt_env must be a dict[str, str], got key={repr(k)}, value={repr(v)}"
+                )
 
 
 @attrs.define(frozen=True)
@@ -190,9 +202,21 @@ class DbtDefaultTargetsConfig:
     default_backfill_target: str = attrs.field(default=None)
 
     def __attrs_post_init__(self):
-        object.__setattr__(self, 'default_for_tests_target', self.default_for_tests_target or self.default_target)
-        object.__setattr__(self, 'default_maintenance_target', self.default_maintenance_target or self.default_target)
-        object.__setattr__(self, 'default_backfill_target', self.default_backfill_target or self.default_target)
+        object.__setattr__(
+            self,
+            "default_for_tests_target",
+            self.default_for_tests_target or self.default_target,
+        )
+        object.__setattr__(
+            self,
+            "default_maintenance_target",
+            self.default_maintenance_target or self.default_target,
+        )
+        object.__setattr__(
+            self,
+            "default_backfill_target",
+            self.default_backfill_target or self.default_target,
+        )
 
 
 @attrs.define(frozen=True)
@@ -263,7 +287,7 @@ class RetriesConfig:
         """
         for _attr in attrs.fields(RetriesConfig):
             _attr: attrs.Attribute
-            if _attr.name == 'default_retry_policy':
+            if _attr.name == "default_retry_policy":
                 continue
 
             policy = getattr(self, _attr.name)
@@ -277,7 +301,11 @@ class RetriesConfig:
             for _policy_attr in attrs.fields(RetryPolicy):
                 _policy_attr: attrs.Attribute
                 if getattr(policy, _policy_attr.name) is None:
-                    object.__setattr__(policy, _policy_attr.name, getattr(self.default_retry_policy, _policy_attr.name))
+                    object.__setattr__(
+                        policy,
+                        _policy_attr.name,
+                        getattr(self.default_retry_policy, _policy_attr.name),
+                    )
 
 
 @attrs.define(frozen=True)
@@ -310,17 +338,23 @@ class Config:
 
     # dbt-af specific params
     dbt_default_targets: DbtDefaultTargetsConfig = attrs.field()
-    model_dependencies: ModelDependenciesSection = attrs.field(factory=ModelDependenciesSection)
+    model_dependencies: ModelDependenciesSection = attrs.field(
+        factory=ModelDependenciesSection
+    )
     include_single_model_manual_dag: bool = attrs.field(default=True)
 
     # airflow-specific params
     retries_config: RetriesConfig = attrs.field(factory=RetriesConfig)
     max_active_dag_runs: int = attrs.field(default=50)
-    af_dag_description: str = attrs.field(default='')
-    dag_start_date: pendulum.datetime = attrs.field(default=pendulum.datetime(2023, 10, 1, 0, 0, 0, tz='UTC'))
+    af_dag_description: str = attrs.field(default="")
+    dag_start_date: pendulum.datetime = attrs.field(
+        default=pendulum.datetime(2023, 10, 1, 0, 0, 0, tz="UTC")
+    )
     is_dev: bool = attrs.field(default=False)
     use_dbt_target_specific_pools: bool = attrs.field(default=True)
-
+    schedule_timeshift: Optional[datetime.timedelta] = attrs.field(
+        default=datetime.timedelta(hours=0)
+    )
     # airflow callbacks config
     af_callbacks: Optional[CustomAfCallbacksConfig] = attrs.field(default=None)
 

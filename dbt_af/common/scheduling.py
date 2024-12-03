@@ -11,6 +11,7 @@ from croniter import croniter, croniter_range
 
 @define(order=False)
 class CronExpression:
+
     raw_cron_expression: str = field(validator=lambda _, __, val: croniter.is_valid(val))
 
     def __eq__(self, other):
@@ -57,35 +58,35 @@ class CronExpression:
     @property
     def minutes(self) -> int:
         minutes_part = self._split_cron_expression()[0]
-        if minutes_part == '*':
+        if minutes_part == "*":
             return 0
         return int(minutes_part)
 
     @property
     def hours(self) -> int:
         hours_part = self._split_cron_expression()[1]
-        if hours_part == '*':
+        if hours_part == "*":
             return 0
         return int(hours_part)
 
     @property
     def days(self) -> int:
         days_part = self._split_cron_expression()[2]
-        if days_part == '*':
+        if days_part == "*":
             return 1
         return int(days_part)
 
     @property
     def months(self) -> int:
         months_part = self._split_cron_expression()[3]
-        if months_part == '*':
+        if months_part == "*":
             return 1
         return int(months_part)
 
     @property
     def weekdays(self) -> int:
         weekdays_part = self._split_cron_expression()[4]
-        if weekdays_part == '*':
+        if weekdays_part == "*":
             return 0
         return int(weekdays_part)
 
@@ -119,7 +120,9 @@ class BaseScheduleTag(ABC):
 
     @staticmethod
     @abstractmethod
+
     def _af_repr_impl(full_days_shift: int, full_hours_shift: int, rest_minutes_shift: int) -> str | None:
+
         raise NotImplementedError()
 
     def __str__(self):
@@ -134,11 +137,12 @@ class BaseScheduleTag(ABC):
         return self.level < other.level
 
     def __eq__(self, other: Union[str, 'BaseScheduleTag']):
+
         if isinstance(other, str):
             return self.name == other
         if isinstance(other, BaseScheduleTag):
             return self.name == other.name and self.timeshift == other.timeshift
-        raise TypeError(f'Cannot compare {self} with {other}')
+        raise TypeError(f"Cannot compare {self} with {other}")
 
     @property
     def safe_name(self):
@@ -170,28 +174,35 @@ class BaseScheduleTag(ABC):
 class _MonthlyScheduleTag(BaseScheduleTag):
     name = '@monthly'
     default_cron_expression = CronExpression('0 0 1 * *')
+
     level = 5
 
     def __init__(self, timeshift: Optional[datetime.timedelta] = None):
         self.timeshift = timeshift or self.default_timeshift
 
-    def _af_repr_impl(self, full_days_shift: int, full_hours_shift: int, rest_minutes_shift: int):
+    def _af_repr_impl(
+        self, full_days_shift: int, full_hours_shift: int, rest_minutes_shift: int
+    ):
         """
         base cron expression: 0 0 1 * * (or @monthly)
         """
 
         if full_days_shift > 31:
-            raise ValueError(f'Monthly schedule tag supports only shifts between 1 and 31 days, got {self.timeshift}')
+            raise ValueError(
+                f"Monthly schedule tag supports only shifts between 1 and 31 days, got {self.timeshift}"
+            )
         if full_hours_shift > 23:
-            raise ValueError(f'Monthly schedule tag supports only shifts between 0 and 23 hours, got {self.timeshift}')
+            raise ValueError(
+                f"Monthly schedule tag supports only shifts between 0 and 23 hours, got {self.timeshift}"
+            )
         if rest_minutes_shift > 59:
             raise ValueError(
-                f'Monthly schedule tag supports only shifts between 0 and 59 minutes, got {self.timeshift}'
+                f"Monthly schedule tag supports only shifts between 0 and 59 minutes, got {self.timeshift}"
             )
         if full_days_shift == 0:
             full_days_shift = '1'
 
-        return f'{rest_minutes_shift} {full_hours_shift} {full_days_shift} * *'
+        return f"{rest_minutes_shift} {full_hours_shift} {full_days_shift} * *"
 
 
 class _WeeklyScheduleTag(BaseScheduleTag):
@@ -202,15 +213,19 @@ class _WeeklyScheduleTag(BaseScheduleTag):
     def __init__(self, timeshift: Optional[datetime.timedelta] = None):
         self.timeshift = timeshift or self.default_timeshift
 
-    def _af_repr_impl(self, full_days_shift: int, full_hours_shift: int, rest_minutes_shift: int):
+    def _af_repr_impl(
+        self, full_days_shift: int, full_hours_shift: int, rest_minutes_shift: int
+    ):
         """
         base cron expression: 0 0 * * 0 (or @weekly)
         """
 
         if full_days_shift > 6:
-            raise ValueError(f'Weekly schedule tag supports only shifts between 0 and 6 days, got {self.timeshift}')
+            raise ValueError(
+                f"Weekly schedule tag supports only shifts between 0 and 6 days, got {self.timeshift}"
+            )
 
-        return f'{rest_minutes_shift} {full_hours_shift} * * {full_days_shift}'
+        return f"{rest_minutes_shift} {full_hours_shift} * * {full_days_shift}"
 
 
 class _DailyScheduleTag(BaseScheduleTag):
@@ -221,15 +236,21 @@ class _DailyScheduleTag(BaseScheduleTag):
     def __init__(self, timeshift: Optional[datetime.timedelta] = None):
         self.timeshift = timeshift or self.default_timeshift
 
-    def _af_repr_impl(self, full_days_shift: int, full_hours_shift: int, rest_minutes_shift: int):
+    def _af_repr_impl(
+        self, full_days_shift: int, full_hours_shift: int, rest_minutes_shift: int
+    ):
         """
         base cron expression: 0 0 * * * (or @daily)
         """
 
+        if not all(isinstance(v, int) for v in (full_hours_shift, rest_minutes_shift)):
+            raise TypeError("Daily schedule shift values must be integers.")
         if full_days_shift:
-            raise ValueError(f'Daily schedule tag supports only shifts between 0 and 23 hours, got {self.timeshift}')
+            raise ValueError(
+                f"Daily schedule tag supports only shifts between 0 and 23 hours, got {self.timeshift}"
+            )
 
-        return f'{rest_minutes_shift} {full_hours_shift} * * *'
+        return f"{rest_minutes_shift} {full_hours_shift} * * *"
 
 
 class _HourlyScheduleTag(BaseScheduleTag):
@@ -240,15 +261,41 @@ class _HourlyScheduleTag(BaseScheduleTag):
     def __init__(self, timeshift: Optional[datetime.timedelta] = None):
         self.timeshift = timeshift or self.default_timeshift
 
-    def _af_repr_impl(self, full_days_shift: int, full_hours_shift: int, rest_minutes_shift: int):
+    def _af_repr_impl(
+        self, full_days_shift: int, full_hours_shift: int, rest_minutes_shift: int
+    ):
         """
         base cron expression: 0 * * * * (or @hourly)
         """
 
         if full_days_shift or full_hours_shift:
-            raise ValueError(f'Hourly schedule tag supports only shifts between 0 and 59 minutes, got {self.timeshift}')
+            raise ValueError(
+                f"Hourly schedule tag supports only shifts between 0 and 59 minutes, got {self.timeshift}"
+            )
 
-        return f'{rest_minutes_shift} * * * *'
+        return f"{rest_minutes_shift} * * * *"
+
+
+class _Every15MinutesScheduleTag(BaseScheduleTag):
+    name = "@every15minutes"
+    default_cron_expression = CronExpression("*/15 * * * *")
+    level = 1
+
+    def __init__(self, timeshift: Optional[datetime.timedelta] = None):
+        self.timeshift = timeshift or self.default_timeshift
+
+    def _af_repr_impl(
+        self, full_days_shift: int, full_hours_shift: int, rest_minutes_shift: int
+    ):
+        """
+        base cron expression: */15 * * * * (or @15minutes)
+        """
+
+        if full_days_shift or full_hours_shift or rest_minutes_shift > 59:
+            raise ValueError(
+                f"Every 15 minutes schedule tag supports only shifts between 0 and 59 minutes, got {self.timeshift}"
+            )
+        return f"{rest_minutes_shift}-59/15 * * * *"
 
 
 class _Every15MinutesScheduleTag(BaseScheduleTag):
@@ -280,7 +327,9 @@ class _ManualScheduleTag(BaseScheduleTag):
         self.timeshift = None
 
     @staticmethod
-    def _af_repr_impl(full_days_shift: int, full_hours_shift: int, rest_minutes_shift: int):
+    def _af_repr_impl(
+        full_days_shift: int, full_hours_shift: int, rest_minutes_shift: int
+    ):
         return None
 
     def af_repr(self):
@@ -331,7 +380,7 @@ class ScheduleTag(Enum):
             return self.value.name == other.value.name
         if isinstance(other, str):
             return self.value.name == other
-        raise TypeError(f'Cannot compare {self} with {other}')
+        raise TypeError(f"Cannot compare {self} with {other}")
 
     def __call__(self, *args, **kwargs):
         return self.value(*args, **kwargs)

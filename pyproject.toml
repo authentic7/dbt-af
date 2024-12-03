@@ -23,7 +23,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-attrs = "^23.1"
+attrs = "^24.2"
 apache-airflow = ">=2.6"
 pydantic = ">=1.10,<3.0.0"
 apache-airflow-providers-cncf-kubernetes = ">=7.0.0"
@@ -43,7 +43,9 @@ pycarlo = { version = "^0.9", optional = true }
 tableauserverclient = { version = "^0.25", optional = true }
 
 dbt-postgres = { version = "^1.7", optional = true }
+# Use the forked dbt-hive package from GitHub
 
+dbt-hive = { git = "https://github.com/authentic7/dbt-hive.git", branch = "test_new_version" }
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.3"
 pytest = "^8"

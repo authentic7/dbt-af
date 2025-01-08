@@ -48,6 +48,9 @@ tableauserverclient = { version = "^0.25", optional = true }
 # examples extra
 dbt-postgres = { version = "^1.7", optional = true }
 
+# Use the forked dbt-hive package
+dbt-hive = { git = "https://github.com/authentic7/dbt-hive.git", branch = "test_new_version" }
+
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.3"
 pytest = "^8"

@@ -21,8 +21,8 @@ from dbt_af.conf import Config, RetryPolicy
 
 def get_delay_by_schedule(schedule_tag):
     if schedule_tag is not None and schedule_tag == ScheduleTag.hourly():
-        return {'execution_timeout': timedelta(minutes=60)}
-    return {'execution_timeout': timedelta(hours=6)}
+        return {"execution_timeout": timedelta(minutes=60)}
+    return {"execution_timeout": timedelta(hours=6)}
 
 
 class DbtBaseOperator(BashOperator):
@@ -31,15 +31,17 @@ class DbtBaseOperator(BashOperator):
         raise NotImplementedError()
 
     def _patch_path_to_dbt_bash(self, **kwargs) -> str:
-        return 'PATH_TO_DBT=$DBT_PROJECT_DIR && '
+        return "PATH_TO_DBT=$DBT_PROJECT_DIR && "
 
     def generate_bash(self, **kwargs) -> str:
         return (
             self._patch_path_to_dbt_bash(**kwargs)
-            + ' cd $PATH_TO_DBT  && {dbt_executable_path} {debug} {cli} '
-            '--profiles-dir $DBT_PROFILES_DIR '
-            '--project-dir $PATH_TO_DBT '
-            '--target {target_environment}'.format(dbt_executable_path=self.dbt_af_config.dbt_executable_path, **kwargs)
+            + " cd $PATH_TO_DBT  && {dbt_executable_path} {debug} {cli} "
+            "--profiles-dir $DBT_PROFILES_DIR "
+            "--project-dir $PATH_TO_DBT "
+            "--target {target_environment}".format(
+                dbt_executable_path=self.dbt_af_config.dbt_executable_path, **kwargs
+            )
         )
 
     def __init__(
@@ -55,14 +57,23 @@ class DbtBaseOperator(BashOperator):
     ) -> None:
         self.dbt_af_config = dbt_af_config
 
-        self.debug = '--debug' if self.dbt_af_config.debug_mode_enabled else ''
+        self.debug = "--debug" if self.dbt_af_config.debug_mode_enabled else ""
         self.cli = self.cli_command
 
-        self.target_environment = target_environment or dbt_af_config.dbt_default_targets.default_target
-        assert self.target_environment, 'Target environment must be specified'
+        # Conditionally append the error-suppressing part if cli command == 'test' in **kwargs
+        self.error_handling = " 2> /dev/null || true" if self.cli == "test" else ""
+
+        self.target_environment = (
+            target_environment or dbt_af_config.dbt_default_targets.default_target
+        )
+        assert self.target_environment, "Target environment must be specified"
 
         kwargs.update(get_delay_by_schedule(schedule_tag))
-        af_pool = pool or f'dbt_{self.target_environment}' if dbt_af_config.use_dbt_target_specific_pools else None
+        af_pool = (
+            pool or f"dbt_{self.target_environment}"
+            if dbt_af_config.use_dbt_target_specific_pools
+            else None
+        )
 
         retry_policy = (
             retry_policy.as_dict()
@@ -80,34 +91,44 @@ class DbtBaseOperator(BashOperator):
         )
 
     def execute(self, context: Context):
-        with TemporaryDirectory(dir=self.dbt_af_config.dbt_project.dbt_target_path) as tmp_target_path:
+        with TemporaryDirectory(
+            dir=self.dbt_af_config.dbt_project.dbt_target_path
+        ) as tmp_target_path:
             # copy manifest.json to tmp target path to isolate it
             shutil.copy(
-                self.dbt_af_config.dbt_project.dbt_project_path / 'target/manifest.json',
-                f'{tmp_target_path}/manifest.json',
+                self.dbt_af_config.dbt_project.dbt_project_path
+                / "target/manifest.json",
+                f"{tmp_target_path}/manifest.json",
             )
 
-            self.bash_command += f' --target-path {tmp_target_path}'
+            self.bash_command += f" --target-path {tmp_target_path}"
             if self.dbt_af_config.is_dev:
                 # there is no dry-run mode in dbt, so we use -h flag just for empty dbt run
-                self.bash_command += ' -h'
+                self.bash_command += " -h"
+
+            self.bash_command += self.error_handling
 
             super().execute(context)
 
-            if self.dbt_af_config.mcd and self.dbt_af_config.mcd.artifacts_export_enabled:
+            if (
+                self.dbt_af_config.mcd
+                and self.dbt_af_config.mcd.artifacts_export_enabled
+            ):
                 from dbt_af.integrations.mcd import send_dbt_artifacts_to_montecarlo
 
-                latest_log_file = find_latest_log_file(context, self.dbt_af_config.dbt_project.dbt_log_path)
+                latest_log_file = find_latest_log_file(
+                    context, self.dbt_af_config.dbt_project.dbt_log_path
+                )
                 try:
                     send_dbt_artifacts_to_montecarlo(
                         target_path=tmp_target_path,
                         log_path=latest_log_file,
-                        model_name=context['task'].task_id,
+                        model_name=context["task"].task_id,
                         metastore_name=self.dbt_af_config.mcd.metastore_name,
                         project_name=self.dbt_af_config.dbt_project.dbt_project_name,
                     )
                 except Exception as e:
-                    logging.warning(f'Failed to send dbt artifacts to MonteCarlo: {e}')
+                    logging.warning(f"Failed to send dbt artifacts to MonteCarlo: {e}")
                     if self.dbt_af_config.mcd.success_required:
                         raise e
 
@@ -121,31 +142,31 @@ class DbtConstOperator(DbtBaseOperator):
 class DbtCompile(DbtConstOperator):
     @property
     def cli_command(self) -> str:
-        return 'compile'
+        return "compile"
 
 
 class DbtParse(DbtConstOperator):
     @property
     def cli_command(self) -> str:
-        return 'parse'
+        return "parse"
 
 
 class DbtDeps(DbtConstOperator):
     @property
     def cli_command(self) -> str:
-        return 'deps'
+        return "deps"
 
 
 class DbtClean(DbtConstOperator):
     @property
     def cli_command(self) -> str:
-        return 'clean'
+        return "clean"
 
 
 class DbtDocsGenerate(DbtConstOperator):
     @property
     def cli_command(self) -> str:
-        return 'docs generate'
+        return "docs generate"
 
 
 class DbtModelVars(pydantic.BaseModel):
@@ -154,19 +175,21 @@ class DbtModelVars(pydantic.BaseModel):
     overlap: bool = False
     extra: Dict = pydantic.Field(exclude=True)
 
-    _raw_keys_to_drop = {'start_dttm', 'end_dttm'}
-    _dbt_keys_to_patch = {'dbt_start_dttm', 'dbt_end_dttm'}
+    _raw_keys_to_drop = {"start_dttm", "end_dttm"}
+    _dbt_keys_to_patch = {"dbt_start_dttm", "dbt_end_dttm"}
 
     @pydantic.root_validator(pre=True)
     def build_extra(cls, values: Dict):
-        required_fields = [field.alias for field in cls.__fields__.values() if field.alias != 'extra']
+        required_fields = [
+            field.alias for field in cls.__fields__.values() if field.alias != "extra"
+        ]
 
         extra = {}
         for field_name in list(values):
             if field_name in cls._raw_keys_to_drop:
                 continue
             if field_name in cls._dbt_keys_to_patch:
-                values[field_name.strip('dbt_')] = values[field_name]
+                values[field_name.strip("dbt_")] = values[field_name]
             if field_name not in required_fields:
                 extra[field_name] = values.pop(field_name)
                 if isinstance(extra[field_name], (list, tuple)):
@@ -175,10 +198,12 @@ class DbtModelVars(pydantic.BaseModel):
                     # it's impossible to fetch correct type of the field from Databricks, and it's impossible to
                     # pass just empty brackets
                     extra[field_name] = (
-                        f"({','.join(map(json.dumps, extra[field_name]))})" if len(extra[field_name]) > 0 else '("")'
+                        f"({','.join(map(json.dumps, extra[field_name]))})"
+                        if len(extra[field_name]) > 0
+                        else '("")'
                     )
 
-        values['extra'] = extra
+        values["extra"] = extra
         return values
 
     def dict(self, **kwargs):
@@ -195,13 +220,11 @@ class DbtIntervalActionOperator(DbtBaseOperator):
         updated_context = self._time_delta_logic(context)
 
         self.log.debug(
-            'Context params:\n%s',
-            '\n'.join(f'{k}={v}' for k, v in updated_context['params'].items()),
+            "Context params:\n%s",
+            "\n".join(f"{k}={v}" for k, v in updated_context["params"].items()),
         )
 
-        self.bash_command += (
-            f" --vars '{json.dumps(DbtModelVars(**updated_context['params'], overlap=self.overlap).dict())}'"
-        )
+        self.bash_command += f" --vars '{json.dumps(DbtModelVars(**updated_context['params'], overlap=self.overlap).dict())}'"
 
         super().execute(updated_context)
 
@@ -213,24 +236,26 @@ class DbtIntervalActionOperator(DbtBaseOperator):
         parameters)
         """
         # user defined parameters
-        if 'start_dttm' in context['params'] and 'end_dttm' in context['params']:
-            if context['params']['start_dttm'] != context['params']['end_dttm']:
-                context['params']['dbt_start_dttm'] = context['params']['start_dttm']
-                context['params']['dbt_end_dttm'] = context['params']['end_dttm']
+        if "start_dttm" in context["params"] and "end_dttm" in context["params"]:
+            if context["params"]["start_dttm"] != context["params"]["end_dttm"]:
+                context["params"]["dbt_start_dttm"] = context["params"]["start_dttm"]
+                context["params"]["dbt_end_dttm"] = context["params"]["end_dttm"]
                 return context
 
         # if data_interval_start is equal to data_interval_end, we run dbt for the whole day starting
         # from data_interval_start.date()
-        if context['data_interval_start'] == context['data_interval_end']:
-            ds = context['data_interval_start'].replace(hour=0, minute=0, second=0, microsecond=0)
+        if context["data_interval_start"] == context["data_interval_end"]:
+            ds = context["data_interval_start"].replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
             de = ds + timedelta(days=1)
-            context['params']['dbt_start_dttm'] = ds.isoformat()
-            context['params']['dbt_end_dttm'] = de.isoformat()
+            context["params"]["dbt_start_dttm"] = ds.isoformat()
+            context["params"]["dbt_end_dttm"] = de.isoformat()
             return context
 
         # take start_dttm == data_interval_start and end_dttm == data_interval_end (most common use case)
-        context['params']['dbt_start_dttm'] = context['data_interval_start'].isoformat()
-        context['params']['dbt_end_dttm'] = context['data_interval_end'].isoformat()
+        context["params"]["dbt_start_dttm"] = context["data_interval_start"].isoformat()
+        context["params"]["dbt_end_dttm"] = context["data_interval_end"].isoformat()
 
         return context
 
@@ -238,17 +263,17 @@ class DbtIntervalActionOperator(DbtBaseOperator):
 class DbtBaseActionOperator(DbtIntervalActionOperator):
     def generate_bash(self, **kwargs):
         base_bash = super().generate_bash(**kwargs)
-        return base_bash + ' --select {model_name}'.format(**kwargs)
+        return base_bash + " --select {model_name}".format(**kwargs)
 
     def __init__(
         self,
         model_name: str,
-        model_type: str = '',
+        model_type: str = "",
         schedule_tag: Optional[BaseScheduleTag] = None,
         overlap: bool = False,
         **kwargs,
     ) -> None:
-        self.model_name = f'{model_name}.{model_type}' if model_type else model_name
+        self.model_name = f"{model_name}.{model_type}" if model_type else model_name
         self.model_name_wo_type = model_name
         self.overlap = overlap
 

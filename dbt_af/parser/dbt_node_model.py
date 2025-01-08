@@ -18,16 +18,16 @@ from dbt_af.parser.dbt_profiles import KubernetesTarget, Profile, Target
 
 
 class DbtModelMaintenanceType(enum.Enum):
-    PERSIST_DOCS = 'persist_docs'
-    OPTIMIZE_TABLES = 'optimize_table'
-    VACUUM_TABLE = 'vacuum_table'
-    DEDUPLICATE_TABLE = 'deduplicate_table'
-    SET_TTL_ON_TABLE = 'set_ttl_on_table'
+    PERSIST_DOCS = "persist_docs"
+    OPTIMIZE_TABLES = "optimize_table"
+    VACUUM_TABLE = "vacuum_table"
+    DEDUPLICATE_TABLE = "deduplicate_table"
+    SET_TTL_ON_TABLE = "set_ttl_on_table"
 
 
 class WaitPolicy(enum.Enum):
-    last = 'last'
-    all = 'all'
+    last = "last"
+    all = "all"
 
 
 class DependencyConfig(pydantic.BaseModel):
@@ -36,23 +36,25 @@ class DependencyConfig(pydantic.BaseModel):
 
 
 class TTLConfig(pydantic.BaseModel):
-    key: str = pydantic.Field(description='Table timestamp-like column name')
-    expiration_timeout: int = pydantic.Field(description='Table expiration timeout in days')
+    key: str = pydantic.Field(description="Table timestamp-like column name")
+    expiration_timeout: int = pydantic.Field(
+        description="Table expiration timeout in days"
+    )
     additional_predicate: Optional[str] = pydantic.Field(
-        description='Additional predicate for filtering expired data',
-        default='',
+        description="Additional predicate for filtering expired data",
+        default="",
     )
     force_predicate: Optional[str] = pydantic.Field(
-        description='Force predicate for filtering expired data. It will override base predicate',
-        default='',
+        description="Force predicate for filtering expired data. It will override base predicate",
+        default="",
     )
 
     @pydantic.root_validator(pre=True)
     def validate_ttl_config(cls, values: dict[str, Any]) -> dict[str, Any]:
         # if force_predicate is set, then key and expiration_timeout are not required
-        if values.get('force_predicate'):
-            values['key'] = values.get('key', '')
-            values['expiration_timeout'] = values.get('expiration_timeout', 0)
+        if values.get("force_predicate"):
+            values["key"] = values.get("key", "")
+            values["expiration_timeout"] = values.get("expiration_timeout", 0)
 
         return values
 
@@ -81,8 +83,8 @@ class DbtAFMaintenanceConfig(pydantic.BaseModel):
 
 
 class TableauRefreshResourceType(str, enum.Enum):
-    workbook = 'workbook'
-    datasource = 'datasource'
+    workbook = "workbook"
+    datasource = "datasource"
 
 
 class TableauRefreshTaskConfig(pydantic.BaseModel):
@@ -94,7 +96,7 @@ class TableauRefreshTaskConfig(pydantic.BaseModel):
 class DbtNodeConfig(pydantic.BaseModel):
     enabled: bool
     alias: Optional[str]
-    node_schema: Optional[str] = pydantic.Field(..., alias='schema')
+    node_schema: Optional[str] = pydantic.Field(..., alias="schema")
     database: Optional[str]
     tags: List[str]
     meta: Dict[str, Any]
@@ -115,10 +117,16 @@ class DbtNodeConfig(pydantic.BaseModel):
     tblproperties: Optional[Dict[str, Any]]
     partition_by: Optional[Union[str, List[str]]]
     incremental_predicates: Optional[List[str]]
-    post_hook: Optional[List[Dict[str, Any]]] = pydantic.Field(alias='post-hook', default_factory=list)
-    pre_hook: Optional[List[Dict[str, Any]]] = pydantic.Field(alias='pre-hook', default_factory=list)
+    post_hook: Optional[List[Dict[str, Any]]] = pydantic.Field(
+        alias="post-hook", default_factory=list
+    )
+    pre_hook: Optional[List[Dict[str, Any]]] = pydantic.Field(
+        alias="pre-hook", default_factory=list
+    )
 
-    schedule: Optional[BaseScheduleTag] = pydantic.Field(default_factory=ScheduleTag.daily)
+    schedule: Optional[BaseScheduleTag] = pydantic.Field(
+        default_factory=ScheduleTag.daily
+    )
 
     dependencies: Optional[DefaultDict[str, DependencyConfig]] = pydantic.Field(
         default_factory=lambda: defaultdict(DependencyConfig)
@@ -131,50 +139,58 @@ class DbtNodeConfig(pydantic.BaseModel):
     daily_sql_cluster: Optional[str]
     bf_cluster: Optional[str]
 
-    enable_from_dttm: Optional[str] = pydantic.Field(default='')
-    disable_from_dttm: Optional[str] = pydantic.Field(default='')
+    enable_from_dttm: Optional[str] = pydantic.Field(default="")
+    disable_from_dttm: Optional[str] = pydantic.Field(default="")
 
     airflow_parallelism: int = pydantic.Field(default=1)
-    domain_start_date: Optional[str] = pydantic.Field(default='')
+    domain_start_date: Optional[str] = pydantic.Field(default="")
 
-    dbt_target: Optional[str] = pydantic.Field(default='')
+    dbt_target: Optional[str] = pydantic.Field(default="")
 
-    maintenance: DbtAFMaintenanceConfig = pydantic.Field(default_factory=DbtAFMaintenanceConfig)
+    maintenance: DbtAFMaintenanceConfig = pydantic.Field(
+        default_factory=DbtAFMaintenanceConfig
+    )
 
-    tableau_refresh_tasks: Optional[List[TableauRefreshTaskConfig]] = pydantic.Field(default_factory=list)
+    tableau_refresh_tasks: Optional[List[TableauRefreshTaskConfig]] = pydantic.Field(
+        default_factory=list
+    )
 
     class Config:
         arbitrary_types_allowed = True
 
     @pydantic.root_validator(pre=True)
     def validate_clusters(cls, values):
-        if values['materialized'] not in ('test', 'seed'):
+        if values["materialized"] not in ("test", "seed"):
             if not all(
                 [
-                    values['py_cluster'],
-                    values['sql_cluster'],
-                    values['daily_sql_cluster'],
-                    values['bf_cluster'],
+                    values["py_cluster"],
+                    values["sql_cluster"],
+                    values["daily_sql_cluster"],
+                    values["bf_cluster"],
                 ]
             ):
-                raise ValueError('py_cluster, sql_cluster and daily_sql_cluster must be set')
+                raise ValueError(
+                    "py_cluster, sql_cluster and daily_sql_cluster must be set"
+                )
         return values
 
     @pydantic.root_validator(pre=True)
     def validate_airflow_parallelism(cls, values):
-        if 'airflow_parallelism' in values and isinstance(values['airflow_parallelism'], str):
-            values['airflow_parallelism'] = int(values['airflow_parallelism'])
+        if "airflow_parallelism" in values and isinstance(
+            values["airflow_parallelism"], str
+        ):
+            values["airflow_parallelism"] = int(values["airflow_parallelism"])
         return values
 
-    @pydantic.validator('schedule', pre=True)
+    @pydantic.validator("schedule", pre=True)
     def validate_schedule(cls, v):
         if v not in [item.value().name for item in ScheduleTag]:
             return ScheduleTag.daily()
-        return ScheduleTag[v.lstrip('@')]()
+        return ScheduleTag[v.lstrip("@")]()
 
-    @pydantic.validator('domain_start_date', pre=True)
+    @pydantic.validator("domain_start_date", pre=True)
     def validate_domain_start_date(cls, v):
-        if v == '':
+        if v == "":
             return v
         pendulum.from_format(v, DOMAIN_DAG_START_DATE_FMT)
         return v
@@ -191,8 +207,8 @@ class DbtNodeColumn(pydantic.BaseModel):
 
 
 class DbtNode(pydantic.BaseModel):
-    database: str
-    node_schema: str = pydantic.Field(..., alias='schema')
+    database: Optional[str]  # for iceberg it is optional
+    node_schema: str = pydantic.Field(..., alias="schema")
     name: str
     resource_type: str
     package_name: str
@@ -220,7 +236,9 @@ class DbtNode(pydantic.BaseModel):
     refs: Optional[List[Dict[str, Any]]]
     sources: Optional[List[Any]] = pydantic.Field(default_factory=list)
     metrics: Optional[List[Dict[str, Any]]] = pydantic.Field(default_factory=list)
-    node_depends_on: Optional[Dict[str, Any]] = pydantic.Field(alias='depends_on', default_factory=dict)
+    node_depends_on: Optional[Dict[str, Any]] = pydantic.Field(
+        alias="depends_on", default_factory=dict
+    )
     compiled_path: Optional[str]
     contract: Optional[Dict[str, Any]] = pydantic.Field(default_factory=dict)
     access: Optional[str]
@@ -238,7 +256,9 @@ class DbtNode(pydantic.BaseModel):
             return self.unique_id == other.unique_id
         if isinstance(other, str):
             return self.unique_id == other
-        raise TypeError(f'Cannot compare {self.__class__.__name__} with {other.__class__.__name__}')
+        raise TypeError(
+            f"Cannot compare {self.__class__.__name__} with {other.__class__.__name__}"
+        )
 
     @property
     def domain(self):
@@ -263,24 +283,28 @@ class DbtNode(pydantic.BaseModel):
         model.dtt.task_w_test__ods__one
 
         """
-        if self.unique_id.startswith('test.'):
-            return self.unique_id.split('.', maxsplit=2)[2].rsplit('.', maxsplit=1)[0]
+        if self.unique_id.startswith("test."):
+            return self.unique_id.split(".", maxsplit=2)[2].rsplit(".", maxsplit=1)[0]
 
-        return self.unique_id.split('.', maxsplit=2)[2]
+        return self.unique_id.split(".", maxsplit=2)[2]
 
     @property
     def depends_on(self):
         return [
-            dep for dep in self.node_depends_on['nodes'] if dep.startswith(('test.', 'model.', 'snapshot.', 'seed.'))
+            dep
+            for dep in self.node_depends_on["nodes"]
+            if dep.startswith(("test.", "model.", "snapshot.", "seed."))
         ]
 
     @property
     def depends_on_sources(self):
-        return [dep for dep in self.node_depends_on['nodes'] if dep.startswith('source.')]
+        return [
+            dep for dep in self.node_depends_on["nodes"] if dep.startswith("source.")
+        ]
 
     @property
     def materialized(self):
-        return self.config.materialized if self.resource_type == 'model' else ''
+        return self.config.materialized if self.resource_type == "model" else ""
 
     @property
     def test_type(self):
@@ -290,7 +314,7 @@ class DbtNode(pydantic.BaseModel):
 
         test_tags = {f.value for f in TestTag} & set(self.tags)
         if len(test_tags) > 1:
-            raise ValueError(f'Several test tags for {self.unique_id} are not allowed')
+            raise ValueError(f"Several test tags for {self.unique_id} are not allowed")
         if not test_tags:
             return TestTag.small.value
 
@@ -299,9 +323,9 @@ class DbtNode(pydantic.BaseModel):
     @property
     def model_type(self):
         if self.is_py_model():
-            return 'py'
+            return "py"
         if self.is_sql_model():
-            return 'sql'
+            return "sql"
         return None
 
     def target_environment(self, default_dbt_targets: DbtDefaultTargetsConfig) -> str:
@@ -311,7 +335,7 @@ class DbtNode(pydantic.BaseModel):
         if self.is_test():
             return default_dbt_targets.default_for_tests_target
 
-        if len(self.config.pre_hook) == 0 and self.model_type == 'sql':
+        if len(self.config.pre_hook) == 0 and self.model_type == "sql":
             if self.config.schedule in (ScheduleTag.daily(), ScheduleTag.weekly()):
                 return self.config.daily_sql_cluster
 
@@ -325,58 +349,61 @@ class DbtNode(pydantic.BaseModel):
 
     @property
     def original_file_path_without_extension(self):
-        return str(Path(self.original_file_path).with_suffix(''))
+        return str(Path(self.original_file_path).with_suffix(""))
 
     def is_model(self) -> bool:
-        return self.resource_type == 'model'
+        return self.resource_type == "model"
 
     def is_view(self) -> bool:
-        return self.materialized == 'view'
+        return self.materialized == "view"
 
     def is_snapshot(self) -> bool:
-        return self.resource_type == 'snapshot'
+        return self.resource_type == "snapshot"
 
     def is_test(self) -> bool:
-        return self.resource_type == 'test'
+        return self.resource_type == "test"
 
     def is_small_test(self) -> bool:
-        return self.resource_type == 'test' and self.test_type == TestTag.small.value
+        return self.resource_type == "test" and self.test_type == TestTag.small.value
 
     def is_medium_test(self) -> bool:
-        return self.resource_type == 'test' and self.test_type == TestTag.medium.value
+        return self.resource_type == "test" and self.test_type == TestTag.medium.value
 
     def is_large_test(self) -> bool:
-        return self.resource_type == 'test' and self.test_type == TestTag.large.value
+        return self.resource_type == "test" and self.test_type == TestTag.large.value
 
     def is_seed(self) -> bool:
-        return self.resource_type == 'seed'
+        return self.resource_type == "seed"
 
     def is_sql_model(self) -> bool:
-        return self.path.endswith('.sql')
+        return self.path.endswith(".sql")
 
     def is_py_model(self) -> bool:
-        return self.path.endswith('.py')
+        return self.path.endswith(".py")
 
     def is_at_etl_service(self, etl_service_name) -> bool:
         return etl_service_name in self.original_file_path
 
     def has_dt_partition(self) -> bool:
         # TODO: refactor this
-        whitelisted_dt_partitions = {'timestamp'}
+        whitelisted_dt_partitions = {"timestamp"}
 
         if self.config.partition_by is None:
             return False
         if isinstance(self.config.partition_by, str):
-            return '_dt' in self.config.partition_by or self.config.partition_by in whitelisted_dt_partitions
-        if isinstance(self.config.partition_by, list):
-            return '_dt' in ''.join(self.config.partition_by) or not whitelisted_dt_partitions.isdisjoint(
-                self.config.partition_by
+            return (
+                "_dt" in self.config.partition_by
+                or self.config.partition_by in whitelisted_dt_partitions
             )
+        if isinstance(self.config.partition_by, list):
+            return "_dt" in "".join(
+                self.config.partition_by
+            ) or not whitelisted_dt_partitions.isdisjoint(self.config.partition_by)
 
         return False
 
     def get_airflow_parallelism(self) -> int:
-        if self.materialized != 'incremental' or not self.has_dt_partition():
+        if self.materialized != "incremental" or not self.has_dt_partition():
             return 1
 
         return self.config.airflow_parallelism
@@ -384,5 +411,9 @@ class DbtNode(pydantic.BaseModel):
     def get_required_maintenance_types(self) -> list[DbtModelMaintenanceType]:
         return self.config.maintenance.get_required_maintenance_types()
 
-    def set_target_details(self, profile: Profile, default_dbt_targets: DbtDefaultTargetsConfig):
-        self.target_details = profile.outputs[self.target_environment(default_dbt_targets=default_dbt_targets)]
+    def set_target_details(
+        self, profile: Profile, default_dbt_targets: DbtDefaultTargetsConfig
+    ):
+        self.target_details = profile.outputs[
+            self.target_environment(default_dbt_targets=default_dbt_targets)
+        ]

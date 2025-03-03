@@ -1,3 +1,4 @@
+import re
 from collections import defaultdict
 from typing import Generator, Optional
 
@@ -14,6 +15,7 @@ from dbt_af.operators.sensors import (
     AfExecutionDateFn,
     DbtExternalSensor,
     DbtSourceFreshnessSensor,
+    DbtSqlSensor,
 )
 from dbt_af.operators.supplemental import TableauExtractsRefreshOperator
 from dbt_af.parser.dbt_node_model import DbtNode, DbtNodeConfig
@@ -340,6 +342,20 @@ class DagModel(DagComponent):
 
     def _init_source_dependencies_af(self, delayed_deps: DagDelayedDependencyRegistry):
         for source_dep in self._depends_on_sources:
+            if source_dep.node_schema == "parquet":
+                sql_wait = DbtSqlSensor(
+                    dbt_af_config=self.domain_dag.config,
+                    task_id=f"wait__{source_dep.source_name}.{source_dep.name}",
+                    task_group=self.task_group,
+                    identifier=re.sub(
+                        r"\*.*$", "", source_dep.identifier
+                    ),  # Removes `*` and everything after
+                    offset="-1",
+                    dep_schedule=self.domain_dag.schedule,
+                    dag=self.domain_dag.af_dag,
+                )
+                delayed_deps(sql_wait) >> delayed_deps(self.model_task)
+
             if source_dep.need_to_check_freshness():
                 source_wait = DbtSourceFreshnessSensor(
                     task_id=f"wait_freshness__{source_dep.name}__for__{self.safe_name}",

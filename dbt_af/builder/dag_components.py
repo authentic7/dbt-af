@@ -348,9 +348,9 @@ class DagModel(DagComponent):
                     task_id=f"wait__{source_dep.source_name}.{source_dep.name}",
                     task_group=self.task_group,
                     identifier=re.sub(
-                        r"\*.*$", "", source_dep.identifier
-                    ),  # Removes `*` and everything after
-                    offset="-1",
+                        r"^`|`$|\*.*$", "", source_dep.identifier
+                    ),  # Removes both leading/trailing ` and everything after `*`
+                    offset=source_dep.meta.get("offset", "-1"),
                     dep_schedule=self.domain_dag.schedule,
                     dag=self.domain_dag.af_dag,
                 )

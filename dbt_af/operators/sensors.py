@@ -382,7 +382,11 @@ class DbtSqlSensor(SqlSensor):
         super().__init__(  # Calls the parent class (SqlSensor)
             task_id=task_id,
             conn_id="airflow_conf_db",
-            success=lambda record: self.sensor_success(record),
+            success=self.sensor_success,
+            mode="reschedule",
+            pool=(
+                DBT_SENSOR_POOL if dbt_af_config.use_dbt_target_specific_pools else None
+            ),
             fail_on_empty=True,
             sql=sql_query,
             task_group=task_group,  # Passing task_group

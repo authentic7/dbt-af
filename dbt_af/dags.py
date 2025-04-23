@@ -5,7 +5,11 @@ import yaml
 from airflow.models.dag import DAG
 from airflow.models.param import Param
 
-from dbt_af.builder.dbt_af_builder import BackfillDomainDag, DbtAfGraph, get_domain_dag_start_date
+from dbt_af.builder.dbt_af_builder import (
+    BackfillDomainDag,
+    DbtAfGraph,
+    get_domain_dag_start_date,
+)
 from dbt_af.common.af_callbacks import collect_af_custom_callbacks
 from dbt_af.common.constants import DBT_MODEL_DAG_PARAM, DEFAULT_DAG_ARGS
 from dbt_af.conf import Config
@@ -27,8 +31,9 @@ def dbt_main_dags(graph: DbtAfGraph) -> dict[str, DAG]:
             catchup=domain_dag.catchup if not graph.config.is_dev else False,
             default_args=DEFAULT_DAG_ARGS,
             max_active_runs=graph.config.max_active_dag_runs,
+            max_active_tasks=graph.config.max_active_tasks,
             render_template_as_native_obj=False,
-            tags=['dbt'] + domain_dag.tags,
+            tags=["dbt"] + domain_dag.tags,
             **dag_callbacks,
         )
         domain_dag.af_dag = dag
@@ -56,7 +61,7 @@ def dbt_main_dags(graph: DbtAfGraph) -> dict[str, DAG]:
 
 def dbt_run_model_dag(config: Config) -> dict[str, DAG]:
     dbt_project_name = config.dbt_project.dbt_project_name
-    dag_name = f'{dbt_project_name}_dbt_run_model'
+    dag_name = f"{dbt_project_name}_dbt_run_model"
 
     dag_callbacks, task_callbacks = collect_af_custom_callbacks(config)
     dag = DAG(
@@ -67,18 +72,18 @@ def dbt_run_model_dag(config: Config) -> dict[str, DAG]:
         catchup=False,
         default_args=DEFAULT_DAG_ARGS,
         max_active_runs=config.max_active_dag_runs,
-        tags=[dbt_project_name, 'dbt', 'system'],
+        tags=[dbt_project_name, "dbt", "system"],
         params={
-            DBT_MODEL_DAG_PARAM: Param('', type='string'),
-            'start_dttm': Param('2000-01-01T00:00:00', type='string'),
-            'end_dttm': Param('2000-01-01T00:00:00', type='string'),
+            DBT_MODEL_DAG_PARAM: Param("", type="string"),
+            "start_dttm": Param("2000-01-01T00:00:00", type="string"),
+            "end_dttm": Param("2000-01-01T00:00:00", type="string"),
         },
         **dag_callbacks,
     )
 
     target_environment = config.dbt_default_targets.default_target
     DbtRun(
-        task_id='dbt_model',
+        task_id="dbt_model",
         model_name=None,
         dag=dag,
         target_environment=target_environment,
@@ -99,7 +104,11 @@ def _compile_dbt_dags(
     dags = {}
 
     graph = DbtAfGraph.from_manifest(
-        manifest_content, profiles, project_profile_name, etl_service_name=etl_service_name, config=config
+        manifest_content,
+        profiles,
+        project_profile_name,
+        etl_service_name=etl_service_name,
+        config=config,
     )
 
     dags.update(dbt_main_dags(graph))
@@ -109,7 +118,9 @@ def _compile_dbt_dags(
     return dags
 
 
-def compile_dbt_af_dags(manifest_path: str, config: Config, etl_service_name: Optional[str] = None) -> dict[str, DAG]:
+def compile_dbt_af_dags(
+    manifest_path: str, config: Config, etl_service_name: Optional[str] = None
+) -> dict[str, DAG]:
     """
     Compiles airflow DAGs from manifest according to provided dbt-af config.
     It's possible to use different etl service names for different model groups in one dbt project.
@@ -118,12 +129,16 @@ def compile_dbt_af_dags(manifest_path: str, config: Config, etl_service_name: Op
     with open(manifest_path) as fin:
         manifest = json.load(fin)
 
-    with open(config.dbt_project.dbt_profiles_path / 'profiles.yml') as fin:
+    with open(config.dbt_project.dbt_profiles_path / "profiles.yml") as fin:
         profiles = yaml.safe_load(fin)
 
-    with open(config.dbt_project.dbt_project_path / 'dbt_project.yml') as fin:
-        dbt_project_profile_name = yaml.safe_load(fin)['profile']
+    with open(config.dbt_project.dbt_project_path / "dbt_project.yml") as fin:
+        dbt_project_profile_name = yaml.safe_load(fin)["profile"]
 
     return _compile_dbt_dags(
-        manifest, profiles, dbt_project_profile_name, etl_service_name=etl_service_name, config=config
+        manifest,
+        profiles,
+        dbt_project_profile_name,
+        etl_service_name=etl_service_name,
+        config=config,
     )

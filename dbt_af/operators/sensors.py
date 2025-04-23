@@ -229,7 +229,7 @@ class DbtExternalSensor(ExternalTaskSensor):
             mode="reschedule",
             skipped_states=[State.NONE, State.SKIPPED],
             failed_states=[State.FAILED, State.UPSTREAM_FAILED],
-            timeout=6 * 60 * 60,
+            timeout=9 * 60 * 60,
             poke_interval=_POKE_INTERVALS_SECONDS.get(
                 dep_schedule.name, _DEFAULT_POKE_INTERVAL_SECONDS
             ),
@@ -390,6 +390,12 @@ class DbtSqlSensor(SqlSensor):
             fail_on_empty=True,
             sql=sql_query,
             task_group=task_group,  # Passing task_group
+            timeout=9 * 60 * 60,
+            poke_interval=_POKE_INTERVALS_SECONDS.get(
+                dep_schedule.name, _DEFAULT_POKE_INTERVAL_SECONDS
+            ),
+            exponential_backoff=False,
+            **retry_policy,
             **kwargs,
         )
 

@@ -323,6 +323,7 @@ class Config:
     :param debug_mode_enabled: whether to run dbt commands with flag --debug
     :param retries_config: config with retries policies for different DAG component types
     :param max_active_dag_runs: max active dag runs for each airflow dag
+    :param max_active_tasks: max active tasks for each airflow dag runs
     :param af_dag_description: description for airflow dags
     :param dag_start_date: default dag start date
     :param is_dev: whether it is dev environment; it's useful for local development, when you want to run dbt-af and
@@ -351,6 +352,7 @@ class Config:
     # airflow-specific params
     retries_config: RetriesConfig = attrs.field(factory=RetriesConfig)
     max_active_dag_runs: int = attrs.field(default=50)
+    max_active_tasks: int = attrs.field(default=32)
     af_dag_description: str = attrs.field(default="")
     dag_start_date: pendulum.datetime = attrs.field(
         default=pendulum.datetime(2023, 10, 1, 0, 0, 0, tz="UTC")

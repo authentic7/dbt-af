@@ -343,14 +343,15 @@ class DagModel(DagComponent):
     def _init_source_dependencies_af(self, delayed_deps: DagDelayedDependencyRegistry):
         for source_dep in self._depends_on_sources:
             if source_dep.node_schema == "parquet":
+                offset = source_dep.meta.get("offset", "1")
                 sql_wait = DbtSqlSensor(
                     dbt_af_config=self.domain_dag.config,
-                    task_id=f"wait__{source_dep.source_name}.{source_dep.name}",
+                    task_id=f"wait__{source_dep.source_name}.{source_dep.name}.{offset}",
                     task_group=self.task_group,
                     identifier=re.sub(
                         r"^`|`$|\*.*$", "", source_dep.identifier
                     ),  # Removes both leading/trailing ` and everything after `*`
-                    offset=source_dep.meta.get("offset", "-1"),
+                    offset=offset,
                     dep_schedule=self.domain_dag.schedule,
                     dag=self.domain_dag.af_dag,
                 )

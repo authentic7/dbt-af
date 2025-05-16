@@ -29,7 +29,7 @@ def dbt_main_dags(graph: DbtAfGraph) -> dict[str, DAG]:
             description=graph.config.af_dag_description,
             schedule=domain_dag.schedule.af_repr(),
             catchup=domain_dag.catchup if not graph.config.is_dev else False,
-            default_args=DEFAULT_DAG_ARGS,
+            default_args=graph.config.default_args.as_dict(),
             max_active_runs=graph.config.max_active_dag_runs,
             max_active_tasks=graph.config.max_active_tasks,
             render_template_as_native_obj=False,

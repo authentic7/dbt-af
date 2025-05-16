@@ -309,6 +309,39 @@ class RetriesConfig:
 
 
 @attrs.define(frozen=True)
+class DefaultArgsConfig:
+    """
+    A configuration class for Airflow DAG default_args.
+
+    This class provides a structured way to define and customize default arguments
+    for Airflow DAGs, including retry policies.
+    """
+
+    owner: str | None = None
+    retry_policy: RetryPolicy = attrs.field(
+        default=RetryPolicy(
+            retries=1,
+            retry_delay=datetime.timedelta(minutes=1),
+            retry_exponential_backoff=False,
+        )
+    )
+
+    def as_dict(self) -> dict[str, Any]:
+        base_dict = {
+            attr.name: getattr(self, attr.name)
+            for attr in attrs.fields(self.__class__)
+            if not isinstance(getattr(self, attr.name), RetryPolicy)
+            and getattr(self, attr.name) is not None
+        }
+
+        # Incorporate retry policy parameters directly into the dict
+        if self.retry_policy:
+            base_dict.update(self.retry_policy.as_dict())
+
+        return base_dict
+
+
+@attrs.define(frozen=True)
 class Config:
     """
     Main config for dbt-af.
@@ -326,6 +359,7 @@ class Config:
     :param max_active_tasks: max active tasks for each airflow dag runs
     :param af_dag_description: description for airflow dags
     :param dag_start_date: default dag start date
+    :param default_args: dag default args
     :param is_dev: whether it is dev environment; it's useful for local development, when you want to run dbt-af and
         turn off actual dbt runs and integrations with some external systems
     :param use_dbt_target_specific_pools: whether to use dbt target specific pools; if True, then airflow pools will be
@@ -362,6 +396,10 @@ class Config:
     schedule_timeshift: Optional[datetime.timedelta] = attrs.field(
         default=datetime.timedelta(hours=0)
     )
+    default_args: DefaultArgsConfig = attrs.field(
+        factory=lambda: DefaultArgsConfig(owner="airflow")
+    )
+
     # airflow callbacks config
     af_callbacks: Optional[CustomAfCallbacksConfig] = attrs.field(default=None)
 

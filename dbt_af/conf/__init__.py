@@ -3,6 +3,7 @@ from dbt_af.conf.config import (
     CustomAfCallbacksConfig,
     DbtDefaultTargetsConfig,
     DbtProjectConfig,
+    DefaultArgsConfig,
     K8sConfig,
     MCDIntegrationConfig,
     RetriesConfig,
@@ -11,13 +12,14 @@ from dbt_af.conf.config import (
 )
 
 __all__ = [
-    'Config',
-    'DbtDefaultTargetsConfig',
-    'DbtProjectConfig',
-    'K8sConfig',
-    'MCDIntegrationConfig',
-    'TableauIntegrationConfig',
-    'CustomAfCallbacksConfig',
-    'RetriesConfig',
-    'RetryPolicy',
+    "Config",
+    "DbtDefaultTargetsConfig",
+    "DbtProjectConfig",
+    "K8sConfig",
+    "MCDIntegrationConfig",
+    "TableauIntegrationConfig",
+    "CustomAfCallbacksConfig",
+    "RetriesConfig",
+    "RetryPolicy",
+    "DefaultArgsConfig",
 ]

@@ -289,7 +289,7 @@ class DefaultArgsConfig:
     for Airflow DAGs, including retry policies.
     """
 
-    owner: str | None = None
+    owner: str = 'airflow'
     retry_policy: RetryPolicy = attrs.field(
         default=RetryPolicy(
             retries=1,
@@ -362,7 +362,7 @@ class Config:
     dag_start_date: pendulum.datetime = attrs.field(default=pendulum.datetime(2023, 10, 1, 0, 0, 0, tz='UTC'))
     dry_run: bool = attrs.field(default=False)
     use_dbt_target_specific_pools: bool = attrs.field(default=True)
-    default_args: DefaultArgsConfig = attrs.field(factory=lambda: DefaultArgsConfig(owner='airflow'))
+    default_args: DefaultArgsConfig = attrs.field(factory=DefaultArgsConfig)
 
     # airflow callbacks config
     af_callbacks: Optional[CustomAfCallbacksConfig] = attrs.field(default=None)

@@ -12,14 +12,14 @@ from dbt_af.conf.config import (
 )
 
 __all__ = [
-    "Config",
-    "DbtDefaultTargetsConfig",
-    "DbtProjectConfig",
-    "K8sConfig",
-    "MCDIntegrationConfig",
-    "TableauIntegrationConfig",
-    "CustomAfCallbacksConfig",
-    "RetriesConfig",
-    "RetryPolicy",
-    "DefaultArgsConfig",
+    'Config',
+    'DbtDefaultTargetsConfig',
+    'DbtProjectConfig',
+    'K8sConfig',
+    'MCDIntegrationConfig',
+    'TableauIntegrationConfig',
+    'CustomAfCallbacksConfig',
+    'RetriesConfig',
+    'RetryPolicy',
+    'DefaultArgsConfig',
 ]

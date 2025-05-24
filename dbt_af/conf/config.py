@@ -281,6 +281,38 @@ class RetriesConfig:
 
 
 @attrs.define(frozen=True)
+class DefaultArgsConfig:
+    """
+    A configuration class for Airflow DAG default_args.
+
+    This class provides a structured way to define and customize default arguments
+    for Airflow DAGs, including retry policies.
+    """
+
+    owner: str | None = None
+    retry_policy: RetryPolicy = attrs.field(
+        default=RetryPolicy(
+            retries=1,
+            retry_delay=datetime.timedelta(minutes=1),
+            retry_exponential_backoff=False,
+        )
+    )
+
+    def as_dict(self) -> dict[str, Any]:
+        base_dict = {
+            attr.name: getattr(self, attr.name)
+            for attr in attrs.fields(self.__class__)
+            if not isinstance(getattr(self, attr.name), RetryPolicy) and getattr(self, attr.name) is not None
+        }
+
+        # Incorporate retry policy parameters directly into the dict
+        if self.retry_policy:
+            base_dict.update(self.retry_policy.as_dict())
+
+        return base_dict
+
+
+@attrs.define(frozen=True)
 class Config:
     """
     Main config for dbt-af.
@@ -297,6 +329,7 @@ class Config:
     :param max_active_dag_runs: max active dag runs for each airflow dag
     :param af_dag_description: description for airflow dags
     :param dag_start_date: default dag start date
+    :param default_args: dag's default args
     :param dry_run: A flag to enable or disable the execution of dbt commands and integrations with external tools.
         When set to `True`, dbt runs are skipped, and no changes will be applied to the database.
         This mode is typically used for testing or validating workflows without making changes to the target
@@ -329,6 +362,7 @@ class Config:
     dag_start_date: pendulum.datetime = attrs.field(default=pendulum.datetime(2023, 10, 1, 0, 0, 0, tz='UTC'))
     dry_run: bool = attrs.field(default=False)
     use_dbt_target_specific_pools: bool = attrs.field(default=True)
+    default_args: DefaultArgsConfig = attrs.field(factory=lambda: DefaultArgsConfig(owner='airflow'))
 
     # airflow callbacks config
     af_callbacks: Optional[CustomAfCallbacksConfig] = attrs.field(default=None)

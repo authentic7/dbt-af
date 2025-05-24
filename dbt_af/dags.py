@@ -12,7 +12,6 @@ from dbt_af.common.constants import (
     DBT_CLI_COMMAND_EXTRA_FLAGS,
     DBT_CLI_COMMAND_EXTRA_OPTIONS,
     DBT_MODEL_DAG_PARAM,
-    DEFAULT_DAG_ARGS,
     OTHER_DBT_CLI_OPTIONS,
     OTHER_DBT_CLI_OPTIONS_DEFAULT,
 )
@@ -33,7 +32,7 @@ def dbt_main_dags(graph: DbtAfGraph) -> dict[str, DAG]:
             description=graph.config.af_dag_description,
             schedule=domain_dag.schedule.af_repr(),
             catchup=domain_dag.catchup if not graph.config.dry_run else False,
-            default_args=DEFAULT_DAG_ARGS,
+            default_args=graph.config.default_args.as_dict(),
             max_active_runs=graph.config.max_active_dag_runs,
             render_template_as_native_obj=False,
             tags=['dbt'] + domain_dag.tags,
@@ -73,7 +72,7 @@ def dbt_run_model_dag(config: Config) -> dict[str, DAG]:
         description=config.af_dag_description,
         schedule_interval=None,
         catchup=False,
-        default_args=DEFAULT_DAG_ARGS,
+        default_args=config.default_args.as_dict(),
         max_active_runs=config.max_active_dag_runs,
         tags=[dbt_project_name, 'dbt', 'system'],
         params={

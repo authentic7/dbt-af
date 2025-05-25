@@ -270,7 +270,8 @@ class DbtNode(pydantic.BaseModel):
             `[<project>, dbt, models, <domain>, <layer>, <model>, <model>]` for tests
         """
         if self.is_test():
-            return self.fqn[3]
+            pass
+            # return self.fqn[3]
         return self.fqn[1]
 
     @property

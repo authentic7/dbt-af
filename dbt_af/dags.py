@@ -35,6 +35,7 @@ def dbt_main_dags(graph: DbtAfGraph) -> dict[str, DAG]:
             catchup=domain_dag.catchup if not graph.config.dry_run else False,
             default_args=DEFAULT_DAG_ARGS,
             max_active_runs=graph.config.max_active_dag_runs,
+            max_active_tasks=graph.config.max_active_tasks,
             render_template_as_native_obj=False,
             tags=['dbt'] + domain_dag.tags,
             **dag_callbacks,

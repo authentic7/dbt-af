@@ -10,7 +10,7 @@ from dbt_af.common.scheduling import EScheduleTag
 from dbt_af.operators.branch import DbtBranchOperator, create_decision_path_function
 from dbt_af.operators.kubernetes_pod import DbtKubernetesPodOperator
 from dbt_af.operators.run import DbtRun, DbtSeed, DbtSnapshot, DbtTest
-from dbt_af.operators.sensors import AfExecutionDateFn, DbtExternalSensor, DbtSourceFreshnessSensor
+from dbt_af.operators.sensors import AfExecutionDateFn, DbtExternalSensor, DbtSourceFreshnessSensor, DbtSqlSensor
 from dbt_af.operators.supplemental import TableauExtractsRefreshOperator
 from dbt_af.operators.venv import DbtPythonVenvOperator
 from dbt_af.parser.dbt_node_model import DbtNode, DbtNodeConfig
@@ -294,22 +294,36 @@ class DagModel(DagComponent):
             task_group=self.task_group,
             dag=self.domain_dag.af_dag,
         )
-        for test in self._small_tests:
-            test_task = DbtTest(
-                task_id=test.replace('.', '__'),
-                model_name=test,
-                dag=self.domain_dag.af_dag,
-                task_group=self.task_group,
-                schedule_tag=self.domain_dag.schedule,
-                dbt_af_config=self.domain_dag.config,
-            )
-            delayed_deps(self.model_task) >> delayed_deps(test_task)
-            delayed_deps(test_task) >> delayed_deps(endpoint_task)
+        combined_test_task = DbtTest(
+            task_id=f'{self.safe_name}__combined_tests',
+            model_name=self.safe_name,  # Combine all test names into one task
+            dag=self.domain_dag.af_dag,
+            task_group=self.task_group,
+            schedule_tag=self.domain_dag.schedule,
+            dbt_af_config=self.domain_dag.config,
+        )
+        delayed_deps(self.model_task) >> delayed_deps(combined_test_task)
+        delayed_deps(combined_test_task) >> delayed_deps(endpoint_task)
 
         return endpoint_task
 
     def _init_source_dependencies_af(self, delayed_deps: DagDelayedDependencyRegistry):
         for source_dep in self._depends_on_sources:
+            if source_dep.node_schema == 'parquet':
+                offset = source_dep.meta.get('offset', '1')
+                sql_wait = DbtSqlSensor(
+                    dbt_af_config=self.domain_dag.config,
+                    task_id=f'wait__{source_dep.source_name}.{source_dep.name}.{offset}',
+                    task_group=self.task_group,
+                    identifier=re.sub(
+                        r'^`|`$|\*.*$', '', source_dep.identifier
+                    ),  # Removes both leading/trailing ` and everything after `*`
+                    offset=offset,
+                    dep_schedule=self.domain_dag.schedule,
+                    dag=self.domain_dag.af_dag,
+                )
+                delayed_deps(sql_wait) >> delayed_deps(self.model_task)
+
             if source_dep.need_to_check_freshness():
                 source_wait = DbtSourceFreshnessSensor(
                     task_id=f'wait_freshness__{source_dep.name}__for__{self.safe_name}',

@@ -9,6 +9,7 @@ from airflow.hooks.subprocess import SubprocessHook
 from airflow.models.dag import DAG
 from airflow.sensors.external_task import ExternalTaskSensor
 from airflow.sensors.python import PythonSensor
+from airflow.sensors.sql import SqlSensor
 from airflow.utils.state import State
 
 from dbt_af.common.af_scheduling_utils import (
@@ -138,7 +139,7 @@ class DbtExternalSensor(ExternalTaskSensor):
             mode='reschedule',
             skipped_states=[State.NONE, State.SKIPPED],
             failed_states=[State.FAILED, State.UPSTREAM_FAILED],
-            timeout=6 * 60 * 60,
+            timeout=9 * 60 * 60,
             poke_interval=_POKE_INTERVALS_SECONDS.get(dep_schedule.base_name, _DEFAULT_POKE_INTERVAL_SECONDS),
             exponential_backoff=False,
             **retry_policy,
@@ -234,3 +235,89 @@ class DbtSourceFreshnessSensor(PythonSensor):
             return False
 
         return True
+
+
+def get_offset(offset):
+    tmp_offset = str(offset).lower().split('_')
+    val_offset = tmp_offset[0]
+    hours = 5
+    if len(tmp_offset) == 1:
+        time_delta = f'days={val_offset}'
+    elif 'm' == tmp_offset[1]:
+        time_delta = f'months={val_offset}'
+    elif 'y' in tmp_offset[1]:
+        time_delta = f'years={val_offset}'
+    elif 'w' in tmp_offset[1]:
+        time_delta = f'weeks={val_offset}'
+    elif 'h' in tmp_offset[1]:
+        time_delta = ''
+        hours += int(val_offset)
+    else:
+        time_delta = f'days={val_offset}'
+    date_time = (
+        '{{ (execution_date + macros.dateutil.relativedelta.relativedelta('
+        + f'hours={hours}, '
+        + time_delta
+        + """)).strftime("%Y-%m-%d") }}"""
+    )
+    return date_time
+
+
+class DbtSqlSensor(SqlSensor):
+    def __init__(
+        self,
+        dbt_af_config: Config,
+        task_id: str,
+        task_group: 'Optional[TaskGroup]',
+        identifier: str,
+        offset: str,
+        dep_schedule: BaseScheduleTag,
+        dag: 'DAG',
+        **kwargs,
+    ) -> None:
+        retry_policy = dbt_af_config.retries_config.sensor_retry_policy.as_dict()
+        retry_policy['retries'] = max(_RETRIES_COUNT, retry_policy['retries'])
+        sql_query = f"""
+            SELECT concat_ws(
+                '|', s.data_source_name, s.last_date_time, '{get_offset(offset)}'
+            )
+            FROM conf.sources s
+            INNER JOIN conf.dbt_sources dbt
+            ON s.data_source_name = dbt.data_source_name
+            WHERE dbt.path  = '{identifier}'
+            ORDER BY s.last_date_time ASC
+            LIMIT 1;
+        """
+        super().__init__(  # Calls the parent class (SqlSensor)
+            task_id=task_id,
+            conn_id='airflow_conf_db',
+            success=self.sensor_success,
+            mode='reschedule',
+            pool=(DBT_SENSOR_POOL if dbt_af_config.use_dbt_target_specific_pools else None),
+            fail_on_empty=True,
+            sql=sql_query,
+            task_group=task_group,  # Passing task_group
+            timeout=9 * 60 * 60,
+            poke_interval=_POKE_INTERVALS_SECONDS.get(dep_schedule.name, _DEFAULT_POKE_INTERVAL_SECONDS),
+            exponential_backoff=False,
+            **retry_policy,
+            **kwargs,
+        )
+
+    def sensor_success(self, record) -> bool:
+        """✅ Validate the sensor record."""
+        if not record:
+            return False
+        data = str(record).split('|')
+        ready = datetime.strptime(data[1][:10], '%Y-%m-%d') >= datetime.strptime(data[2], '%Y-%m-%d')
+        self.log_status(ready, record)
+        return ready
+
+    def log_status(self, success: bool, record):
+        """✅ Log the status of the sensor."""
+        if not success:
+            print('-' * 50)
+            print(f'❌ Sensor FAILED for source <{record}>')
+            print('-' * 50)
+        else:
+            print(f'✅ Sensor SUCCESS for record: {record}')

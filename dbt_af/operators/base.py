@@ -53,9 +53,6 @@ class DbtBaseOperator(BashOperator):
 
         self.cli = self.cli_command
 
-        # Conditionally append the error-suppressing part if cli command == 'test' in **kwargs
-        self.error_handling = ' 2> /dev/null || true' if self.cli == 'test' else ''
-
         self.target_environment = target_environment or dbt_af_config.dbt_default_targets.default_target
         assert self.target_environment, 'Target environment must be specified'
 
@@ -106,7 +103,10 @@ class DbtBaseOperator(BashOperator):
             if self.dbt_af_config.dry_run:
                 # there is no dry-run mode in dbt, so we use `-h` flag just for empty dbt run
                 self.bash_flags.add('-h')
-            self.bash_command += self.error_handling
+                
+            # Conditionally append the error-suppressing part if cli command == 'test' in **kwargs
+            if self.cli == 'test':
+                self.bash_flags.add(' 2> /dev/null || true')
 
             self._render_full_bash_command()
             super().execute(context)

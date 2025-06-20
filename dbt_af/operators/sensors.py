@@ -278,14 +278,14 @@ class DbtSqlSensor(SqlSensor):
     ) -> None:
         retry_policy = dbt_af_config.retries_config.sensor_retry_policy.as_dict()
         retry_policy['retries'] = max(_RETRIES_COUNT, retry_policy['retries'])
-        sql_query = f"""
+        sql_query = """
             SELECT concat_ws(
-                '|', s.data_source_name, s.last_date_time, '{get_offset(offset)}'
+                '|', s.data_source_name, s.last_date_time, %s
             )
             FROM conf.sources s
             INNER JOIN conf.dbt_sources dbt
             ON s.data_source_name = dbt.data_source_name
-            WHERE dbt.path  = '{identifier}'
+            WHERE dbt.path  = %s
             ORDER BY s.last_date_time ASC
             LIMIT 1;
         """
@@ -297,6 +297,7 @@ class DbtSqlSensor(SqlSensor):
             pool=(DBT_SENSOR_POOL if dbt_af_config.use_dbt_target_specific_pools else None),
             fail_on_empty=True,
             sql=sql_query,
+            parameters=(get_offset(offset), identifier),
             task_group=task_group,  # Passing task_group
             timeout=9 * 60 * 60,
             poke_interval=_POKE_INTERVALS_SECONDS.get(dep_schedule.name, _DEFAULT_POKE_INTERVAL_SECONDS),

@@ -290,6 +290,7 @@ class DefaultArgsConfig:
     """
 
     owner: str = 'airflow'
+    depends_on_past: bool = False
     retry_policy: RetryPolicy = attrs.field(
         default=RetryPolicy(
             retries=1,
@@ -359,7 +360,7 @@ class Config:
     retries_config: RetriesConfig = attrs.field(factory=RetriesConfig)
     max_active_dag_runs: int = attrs.field(default=50)
     af_dag_description: str = attrs.field(default='')
-    dag_start_date: pendulum.datetime = attrs.field(default=pendulum.datetime(2023, 10, 1, 0, 0, 0, tz='UTC'))
+    dag_start_date: pendulum.datetime = attrs.field(default=pendulum.yesterday())
     dry_run: bool = attrs.field(default=False)
     use_dbt_target_specific_pools: bool = attrs.field(default=True)
     default_args: DefaultArgsConfig = attrs.field(factory=DefaultArgsConfig)
